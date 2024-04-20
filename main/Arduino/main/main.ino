@@ -96,20 +96,18 @@ void setup()
 
 void calculateHeadCoordinate(double pressure_[])
 {
-  double weight = 5;
-  double weight2 = 5; 
 
   double ratio1 = pressure_[1] / (pressure_[1] + pressure_[0]);
   double x1 = pillowWidth * ratio1;
 
-  double ratio2 = weight * pressure_[3] / (weight * pressure_[3] + weight2 * pressure_[2]);
+  double ratio2 = pressure_[3] / (pressure_[3] + pressure_[2]);
   double x2 = pillowWidth * ratio2;
 
   double r2 = pillowWidth - x1;
   double r4 = pillowWidth - x2;
   double hypotenuse = sqrt(pow((r2 - r4), 2) + pow(pillowHeight, 2));
 
-  double r5 = hypotenuse * (pressure_[0] + pressure_[1]) / (pressure_[0] + pressure_[1] + weight2 * pressure_[2] + weight * pressure_[3]);
+  double r5 = hypotenuse * (pressure_[0] + pressure_[1]) / (pressure_[0] + pressure_[1] + pressure_[2] + pressure_[3]);
 
   // deg Serial.println(atan2(1.73, 1) * 180 / 3.14);
   // 0.5 Serial.println(cos(3.14/3));
@@ -120,9 +118,9 @@ void calculateHeadCoordinate(double pressure_[])
     headPositionX = x2 + r5 * cos(theta_rad);
     headPositionY = r5 * sin(theta_rad);
 
-    // Serial.println(headPositionX);
+    Serial.println(headPositionX);
     delay(100);
-    // Serial.println(headPositionY);
+    Serial.println(headPositionY);
   }
 
   else
@@ -131,9 +129,9 @@ void calculateHeadCoordinate(double pressure_[])
     headPositionX = x2 - r5 * cos(theta_rad);
     headPositionY = r5 * sin(theta_rad);
 
-    // Serial.println(headPositionX);
+    Serial.println(headPositionX);
     delay(100);
-    // Serial.println(headPositionY);
+    Serial.println(headPositionY);
   }
 }
 
@@ -359,8 +357,8 @@ void loop()
               airPumpPower = 0;
             }
 
-            // if ( 0 <= headPositionX && headPositionX <= 22 && 33.0 <= headPositionY && headPositionY <= 43 && maxAirPressure == airPressure[0])
-            if ( maxAirPressure == airPressure[0])
+            if ( 0 <= headPositionX && headPositionX <= 22 && 33.0 <= headPositionY && headPositionY <= 43 && maxAirPressure == airPressure[0])
+            // if ( maxAirPressure == airPressure[0])
             {
               airPumpPower = pidController.calc(predictedAirPressure[0], airPressure[0], 0.1);
               // airPumpPower = pidController.calc(1.15, airPressure[0], 0.1);
@@ -390,8 +388,8 @@ void loop()
               Serial.print("Left up 1\n"); 
             }
 
-            // else if ( 22 < headPositionX && headPositionX <= 35.5 && 33.0 <= headPositionY && headPositionY <= 43 && maxAirPressure == airPressure[1])
-            else if ( maxAirPressure == airPressure[1])
+            else if ( 22 < headPositionX && headPositionX <= 35.5 && 33.0 <= headPositionY && headPositionY <= 43 && maxAirPressure == airPressure[1])
+            // else if ( maxAirPressure == airPressure[1])
             {
               airPumpPower = pidController.calc(predictedAirPressure[1], airPressure[0], 0.1);
               // airPumpPower = pidController.calc(1.15, airPressure[1], 0.1);
@@ -421,8 +419,8 @@ void loop()
               Serial.print("Center up 2\n");
             }
 
-            // else if ( 35.5 < headPositionX && headPositionX <= 57.5 && 33.0 <= headPositionY && headPositionY <= 43 && maxAirPressure == airPressure[2])
-            else if ( maxAirPressure == airPressure[2])
+            else if ( 35.5 < headPositionX && headPositionX <= 57.5 && 33.0 <= headPositionY && headPositionY <= 43 && maxAirPressure == airPressure[2])
+            // else if ( maxAirPressure == airPressure[2])
             {
               airPumpPower = pidController.calc(predictedAirPressure[2], airPressure[0], 0.1);
               // airPumpPower = pidController.calc(1.15, airPressure[2], 0.1);
@@ -452,8 +450,8 @@ void loop()
               Serial.print("Right up 3\n");
             }
 
-            // else if ( 0 <= headPositionX && headPositionX <= 22 && 0 <= headPositionY && headPositionY < 33.0 && maxAirPressure == airPressure[3])
-            else if ( maxAirPressure == airPressure[3])
+            else if ( 0 <= headPositionX && headPositionX <= 22 && 0 <= headPositionY && headPositionY < 33.0 && maxAirPressure == airPressure[3])
+            // else if ( maxAirPressure == airPressure[3])
             {
               airPumpPower = pidController.calc(predictedAirPressure[3], airPressure[0], 0.1);
               // airPumpPower = pidController.calc(1.15, airPressure[3], 0.1);
@@ -483,8 +481,8 @@ void loop()
               Serial.print("Left down 4\n");
             }
 
-            // else if (22 < headPositionX && headPositionX <= 35.5 && 0 <= headPositionY && headPositionY < 33.0 && maxAirPressure == airPressure[4])
-            else if ( maxAirPressure == airPressure[4])
+            else if (22 < headPositionX && headPositionX <= 35.5 && 0 <= headPositionY && headPositionY < 33.0 && maxAirPressure == airPressure[4])
+            // else if ( maxAirPressure == airPressure[4])
             {
               airPumpPower = pidController.calc(predictedAirPressure[4], airPressure[0], 0.1);
               // airPumpPower = pidController.calc(1.15, airPressure[4], 0.1);
@@ -514,8 +512,8 @@ void loop()
               Serial.print("Center down 5\n");
             }
 
-            // else if (35.5 < headPositionX && headPositionX <= 57.5 && 0 <= headPositionY && headPositionY < 33.0 && maxAirPressure == airPressure[5])
-            else if ( maxAirPressure == airPressure[5])
+            else if (35.5 < headPositionX && headPositionX <= 57.5 && 0 <= headPositionY && headPositionY < 33.0 && maxAirPressure == airPressure[5])
+            // else if ( maxAirPressure == airPressure[5])
             {
               airPumpPower = pidController.calc(predictedAirPressure[5], airPressure[0], 0.1);
               // airPumpPower = pidController.calc(1.15, airPressure[5], 0.1);
