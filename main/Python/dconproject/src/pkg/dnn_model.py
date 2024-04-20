@@ -13,7 +13,7 @@ class DnnModel:
     def __init__(self, input_shape_, output_shape_):
         self.__model = self.__build_model(input_shape_, output_shape_)
 
-    def train(self, X_train, y_train, X_valid, y_valid, epochs=60, batch_size=32):
+    def train(self, X_train, y_train, X_valid, y_valid, epochs=300, batch_size=32):
         self.__log =  self.__model.fit(
             X_train, y_train,
             epochs = epochs, batch_size = batch_size,
@@ -105,8 +105,8 @@ if __name__ == "__main__":
     # Example
 
     # データの読み込み
-    data = pd.read_csv('../../data/processed/sensor_data.csv')
-    data_valid = pd.read_csv('../../data/processed/sensor_data_for_valid.csv')
+    data = pd.read_csv('../../data/interim/sensor_data_for_before_model.csv')
+    data_valid = pd.read_csv('../../data/interim/sensor_data_for_before_model_valid.csv')
 
     # 説明変数と目的変数の分離
     X = data[["Pressure1", "Pressure2", "Pressure3", "Pressure4"]]
@@ -134,14 +134,14 @@ if __name__ == "__main__":
     dnn_model.evaluate(X_test, y_test)
 
     # 新しいデータで予測
-    new_data = np.array([[70.0,0.0,129.0,4.0]])
+    new_data = np.array([[37.0,77.0,327.0,90.0]])
     prediction = dnn_model.predict(new_data)
 
     # 入力データを表示
     print("Input data :", new_data)
 
     # 入力データの正解値
-    Label_training_data = np.array([[0.9,0.82,0.86,0.88,1.16,0.86]])
+    Label_training_data = np.array([[0.86,0.81,0.9,0.86,1.1,0.88]])
     print("Labeled training data: ", Label_training_data)
 
     # 予測結果を表示
