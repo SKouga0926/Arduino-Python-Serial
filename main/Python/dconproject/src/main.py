@@ -8,6 +8,7 @@ import numpy as np
 from pkg import bluetooth_server
 from pkg import space_separated_parser 
 from pkg import dnn_model
+from pkg import dnn_model_6
 
 MAX_WAIT_TIME_SEC = 5 
 
@@ -21,11 +22,10 @@ def inputFromTerminal():
             ser.write(user_input.encode("utf-8"))
             print("Python send :" + user_input)
 
-    
 inputThread = threading.Thread(target=inputFromTerminal)
 inputThread.start()
     
-ser = serial.Serial("COM5", 9600, timeout=0.1)
+ser = serial.Serial("COM6", 9600, timeout=0.1)
 
 server = bluetooth_server.BluetoothServer(ser)
 parser = space_separated_parser.SpaceSeparatedParser()
@@ -37,7 +37,10 @@ parser = space_separated_parser.SpaceSeparatedParser()
 # Dnnインスタンス作成
 
 dnn_model = dnn_model.DnnModel((4,), 4)
-dnn_model.load_model('../model/pressure_model_widgets.h5')
+dnn_model.load_model('../model/dnn_model_4/pressure_model_widgets.h5')
+
+# dnn_model_6 = dnn_model_6.DnnModel_6((4,), 3)
+# dnn_model_6.load_model('../model/dnn_model_6/pressure_model_widgets.h5')
 
 # -------------------------------------------------------------------------
 
@@ -102,6 +105,11 @@ while True:
     server.setAirPressureRslt(predicted_air_pressure)
     ser.write("nofitication prediction completed\n".encode("utf-8"))
     print("Python send :" + "nofitication prediction completed\n")
+
+    ## ロードセルの値を使って推論処理
+    # loadcell_list = parser.get("value")
+    # new_data = np.array([loadcell_list])
+    # dnn_model_6.predict(new_data)
 
     # -------------------------------------------------------------------------
 

@@ -14,7 +14,7 @@ constexpr int16_t MAX_WAIT_TIME_MS = 5000;
 Dcon::SpaceSeparatedParser parser("\n");
 Dcon::CommunicationStatusManager manager("\n");
 Dcon::BluetoothServer server;
-Dcon::PidController pidController(100, 0, 0);
+Dcon::PidController pidController(500, 0, 0);
 
 // 空気圧センサー
 #define SS 10
@@ -45,7 +45,7 @@ Dcon::SolenoidValve solenoidvalve_7(Dcon::Pin::SolenoidValve::Out7);
 //
 
 // 各関数で使う変数
-double airPumpPower = 50;
+double airPumpPower = 0;
 double pressure[4] = {0};
 double airPressure[6] = {0}; 
 
@@ -136,6 +136,72 @@ void calculateHeadCoordinate(double pressure_[])
 }
 
 
+// --------------------------------------------------------
+
+constexpr float points[4][2] = {{0, 43}, {57, 43}, {0, 0}, {57, 0}};
+
+// ZMPを計算する関数
+void calculateZMP(double forces[], int num_points, float &zmp_x, float &zmp_y) {
+
+  // 合力と各点の重み付き座標の合計を初期化
+  float total_force = 0;
+  float weighted_sum_x = 0;
+  float weighted_sum_y = 0;
+  
+  // 各点の座標と力を使って合力と重み付き座標の合計を計算
+  for (int i = 0; i < num_points; i++) {
+    total_force += forces[i];
+    weighted_sum_x += points[i][0] * forces[i];
+    weighted_sum_y += points[i][1] * forces[i];
+  }
+  
+  // ZMPの座標を計算
+  zmp_x = weighted_sum_x / total_force;
+  zmp_y = weighted_sum_y / total_force;
+
+  if ( 0 <= zmp_x && zmp_x <= 22 && 33.0 <= zmp_y && zmp_y <= 43)
+  {
+    Serial.print("Left up ZMP 1\n"); 
+  }
+
+  else if ( 22 < zmp_x && zmp_x <= 35.5 && 33.0 <= zmp_y && zmp_y <= 43)
+  {
+    Serial.print("Center up ZMP 2\n");
+  }
+
+  else if ( 35.5 < headPositionX && headPositionX <= 57.5 && 33.0 <= zmp_y && zmp_y <= 43)
+  {
+    Serial.print("Right up ZMP 3\n");
+  }
+
+  else if ( 0 <= zmp_x && zmp_x <= 22 && 0 <= zmp_y && zmp_y < 33.0)
+  {
+    Serial.print("Left down ZMP 4\n");
+  }
+
+  else if (22 < zmp_x && zmp_x <= 35.5 && 0 <= zmp_y && zmp_y < 33.0)
+  {
+    Serial.print("Center down 5 ZMP\n");
+  }
+
+  else if (35.5 < zmp_x && zmp_x <= 57.5 && 0 <= zmp_y && zmp_y < 33.0)
+  {
+    Serial.print("Right down 6 ZMP\n");
+  }
+
+   // ZMPの座標をシリアルモニタに出力
+  Serial.print("ZMPのx座標: ");
+  Serial.println(zmp_x);
+  Serial.print("ZMPのy座標: ");
+  Serial.println(zmp_y);
+}
+
+
+// --------------------------------------------------------
+
+
+
+
 void loop() 
 {
   // 常時受け取る
@@ -199,6 +265,11 @@ void loop()
       pressure[1] = loadcell.fetchPressure_2();
       pressure[2] = loadcell.fetchPressure_3();
       pressure[3] = loadcell.fetchPressure_4();
+
+      // if (pressure[0] < 20) pressure[0] = 0;
+      // if (pressure[1] < 20) pressure[1] = 0;
+      // if (pressure[2] < 20) pressure[2] = 0;
+      // if (pressure[3] < 20) pressure[3] = 0;
 
       server.setLoadCellRslt(pressure);
       server.responseMessage();
@@ -301,6 +372,10 @@ void loop()
             pressure[1] = loadcell.fetchPressure_2();
             pressure[2] = loadcell.fetchPressure_3();
             pressure[3] = loadcell.fetchPressure_4();
+            // if (pressure[0] < 20) pressure[0] = 0;
+            // if (pressure[1] < 20) pressure[1] = 0;
+            // if (pressure[2] < 20) pressure[2] = 0;
+            // if (pressure[3] < 20) pressure[3] = 0;
 
             // info airPump power
             Serial.print("info airPump power " + String(airPumpPower) + "\n");
@@ -346,6 +421,11 @@ void loop()
 
             calculateHeadCoordinate(pressure);
 
+            // ZMPを計算
+            float zmp_x, zmp_y;
+            calculateZMP(pressure, 4, zmp_x, zmp_y);
+            
+
             message = Serial.readStringUntil('\n') + "\n";
             parser.setMessage(message);
 
@@ -357,7 +437,8 @@ void loop()
               airPumpPower = 0;
             }
 
-            if ( 0 <= headPositionX && headPositionX <= 22 && 33.0 <= headPositionY && headPositionY <= 43 && maxAirPressure == airPressure[0])
+            if ( 0 <= headPositionX && headPositionX <= 22 && 33.0 <= headPositionY && headPositionY <= 43)
+            // if ( 0 <= headPositionX && headPositionX <= 22 && 33.0 <= headPositionY && headPositionY <= 43 && maxAirPressure == airPressure[0])
             // if ( maxAirPressure == airPressure[0])
             {
               airPumpPower = pidController.calc(predictedAirPressure[0], airPressure[0], 0.1);
@@ -372,6 +453,11 @@ void loop()
                 solenoidvalve_5.closeValve();
                 solenoidvalve_6.closeValve();
                 solenoidvalve_7.closeValve();
+
+                if ( 1.25 < airPressure[0])
+                {
+                  airPumpPower = 0;
+                }
               }
 
               else
@@ -380,18 +466,26 @@ void loop()
                 solenoidvalve_7.openValve();
               }
 
-              if ( 1.30 < airPressure[0])
+              if (airPumpTurnOff == true)
               {
                 airPumpPower = 0;
+              }
+
+              airpump.motorSetPower(airPumpPower);
+
+              if (millis() - start_time > MAX_WAIT_TIME_MS)
+              {              
+                break;
               }
 
               Serial.print("Left up 1\n"); 
             }
 
-            else if ( 22 < headPositionX && headPositionX <= 35.5 && 33.0 <= headPositionY && headPositionY <= 43 && maxAirPressure == airPressure[1])
+            else if ( 22 < headPositionX && headPositionX <= 35.5 && 33.0 <= headPositionY && headPositionY <= 43)
+            // else if ( 22 < headPositionX && headPositionX <= 35.5 && 33.0 <= headPositionY && headPositionY <= 43 && maxAirPressure == airPressure[1])
             // else if ( maxAirPressure == airPressure[1])
             {
-              airPumpPower = pidController.calc(predictedAirPressure[1], airPressure[0], 0.1);
+              airPumpPower = pidController.calc(predictedAirPressure[1], airPressure[1], 0.1);
               // airPumpPower = pidController.calc(1.15, airPressure[1], 0.1);
 
               if ( 0 <= airPumpPower)
@@ -403,6 +497,11 @@ void loop()
                 solenoidvalve_5.closeValve();
                 solenoidvalve_6.closeValve();
                 solenoidvalve_7.closeValve();
+
+                if ( 1.25 < airPressure[1])
+                {
+                  airPumpPower = 0;
+                }
               }
 
               else
@@ -411,18 +510,26 @@ void loop()
                 solenoidvalve_7.openValve();
               }
 
-              if ( 1.30 < airPressure[1])
+              if (airPumpTurnOff == true)
               {
                 airPumpPower = 0;
+              }
+
+              airpump.motorSetPower(airPumpPower);
+
+              if (millis() - start_time > MAX_WAIT_TIME_MS)
+              {              
+                break;
               }
 
               Serial.print("Center up 2\n");
             }
 
-            else if ( 35.5 < headPositionX && headPositionX <= 57.5 && 33.0 <= headPositionY && headPositionY <= 43 && maxAirPressure == airPressure[2])
+            else if ( 35.5 < headPositionX && headPositionX <= 57.5 && 33.0 <= headPositionY && headPositionY <= 43)
+            // else if ( 35.5 < headPositionX && headPositionX <= 57.5 && 33.0 <= headPositionY && headPositionY <= 43 && maxAirPressure == airPressure[2])
             // else if ( maxAirPressure == airPressure[2])
             {
-              airPumpPower = pidController.calc(predictedAirPressure[2], airPressure[0], 0.1);
+              airPumpPower = pidController.calc(predictedAirPressure[2], airPressure[2], 0.1);
               // airPumpPower = pidController.calc(1.15, airPressure[2], 0.1);
 
               if ( 0 <= airPumpPower)
@@ -434,6 +541,11 @@ void loop()
                 solenoidvalve_5.closeValve();
                 solenoidvalve_6.closeValve();
                 solenoidvalve_7.closeValve();
+
+                if ( 1.25 < airPressure[2])
+                {
+                  airPumpPower = 0;
+                }
               }
 
               else
@@ -442,18 +554,26 @@ void loop()
                 solenoidvalve_7.openValve();
               }
 
-              if ( 1.30 < airPressure[2])
+              if (airPumpTurnOff == true)
               {
                 airPumpPower = 0;
+              }
+
+              airpump.motorSetPower(airPumpPower);
+
+              if (millis() - start_time > MAX_WAIT_TIME_MS)
+              {              
+                break;
               }
 
               Serial.print("Right up 3\n");
             }
 
-            else if ( 0 <= headPositionX && headPositionX <= 22 && 0 <= headPositionY && headPositionY < 33.0 && maxAirPressure == airPressure[3])
+            else if ( 0 <= headPositionX && headPositionX <= 22 && 0 <= headPositionY && headPositionY < 33.0)
+            // else if ( 0 <= headPositionX && headPositionX <= 22 && 0 <= headPositionY && headPositionY < 33.0 && maxAirPressure == airPressure[3])
             // else if ( maxAirPressure == airPressure[3])
             {
-              airPumpPower = pidController.calc(predictedAirPressure[3], airPressure[0], 0.1);
+              airPumpPower = pidController.calc(predictedAirPressure[3], airPressure[3], 0.1);
               // airPumpPower = pidController.calc(1.15, airPressure[3], 0.1);
 
               if ( 0 <= airPumpPower)
@@ -465,6 +585,11 @@ void loop()
                 solenoidvalve_5.closeValve();
                 solenoidvalve_6.closeValve();
                 solenoidvalve_7.closeValve();
+
+                if ( 1.25 < airPressure[3])
+                {
+                  airPumpPower = 0;
+                }
               }
 
               else
@@ -473,18 +598,26 @@ void loop()
                 solenoidvalve_7.openValve();
               }
 
-              if ( 1.30 < airPressure[3])
+              if (airPumpTurnOff == true)
               {
                 airPumpPower = 0;
+              }
+
+              airpump.motorSetPower(airPumpPower);
+
+              if (millis() - start_time > MAX_WAIT_TIME_MS)
+              {              
+                break;
               }
 
               Serial.print("Left down 4\n");
             }
 
-            else if (22 < headPositionX && headPositionX <= 35.5 && 0 <= headPositionY && headPositionY < 33.0 && maxAirPressure == airPressure[4])
+            else if (22 < headPositionX && headPositionX <= 35.5 && 0 <= headPositionY && headPositionY < 33.0)
+            // else if (22 < headPositionX && headPositionX <= 35.5 && 0 <= headPositionY && headPositionY < 33.0 && maxAirPressure == airPressure[4])
             // else if ( maxAirPressure == airPressure[4])
             {
-              airPumpPower = pidController.calc(predictedAirPressure[4], airPressure[0], 0.1);
+              airPumpPower = pidController.calc(predictedAirPressure[4], airPressure[4], 0.1);
               // airPumpPower = pidController.calc(1.15, airPressure[4], 0.1);
 
               if ( 0 <= airPumpPower)
@@ -496,6 +629,11 @@ void loop()
                 solenoidvalve_5.openValve();
                 solenoidvalve_6.closeValve();
                 solenoidvalve_7.closeValve();
+
+                if ( 1.25 < airPressure[4])
+                {
+                  airPumpPower = 0;
+                }
               }
 
               else
@@ -504,18 +642,26 @@ void loop()
                 solenoidvalve_7.openValve();
               }
 
-              if ( 1.30 < airPressure[4])
+              if (airPumpTurnOff == true)
               {
                 airPumpPower = 0;
+              }
+
+              airpump.motorSetPower(airPumpPower);
+
+              if (millis() - start_time > MAX_WAIT_TIME_MS)
+              {              
+                break;
               }
 
               Serial.print("Center down 5\n");
             }
 
-            else if (35.5 < headPositionX && headPositionX <= 57.5 && 0 <= headPositionY && headPositionY < 33.0 && maxAirPressure == airPressure[5])
+            else if (35.5 < headPositionX && headPositionX <= 57.5 && 0 <= headPositionY && headPositionY < 33.0)
+            // else if (35.5 < headPositionX && headPositionX <= 57.5 && 0 <= headPositionY && headPositionY < 33.0 && maxAirPressure == airPressure[5])
             // else if ( maxAirPressure == airPressure[5])
             {
-              airPumpPower = pidController.calc(predictedAirPressure[5], airPressure[0], 0.1);
+              airPumpPower = pidController.calc(predictedAirPressure[5], airPressure[5], 0.1);
               // airPumpPower = pidController.calc(1.15, airPressure[5], 0.1);
 
               if ( 0 <= airPumpPower)
@@ -527,6 +673,11 @@ void loop()
                 solenoidvalve_5.closeValve();
                 solenoidvalve_6.openValve();
                 solenoidvalve_7.closeValve();
+
+                 if ( 1.25 < airPressure[5])
+                {
+                  airPumpPower = 0;
+                }
               }
 
               else
@@ -535,39 +686,47 @@ void loop()
                 solenoidvalve_7.openValve();
               }
 
-              if ( 1.30 < airPressure[5])
+              
+              if (airPumpTurnOff == true)
               {
                 airPumpPower = 0;
+              }
+
+              airpump.motorSetPower(airPumpPower);
+
+              if (millis() - start_time > MAX_WAIT_TIME_MS)
+              {              
+                break;
               }
 
               Serial.print("Right down 6\n");
             }
 
-            if (maxAirPressure < 1.05)
-            {
-              solenoidvalve_1.closeValve();
-              solenoidvalve_2.closeValve();
-              solenoidvalve_3.closeValve();
-              solenoidvalve_4.closeValve();
-              solenoidvalve_5.closeValve();
-              solenoidvalve_6.closeValve();
-              solenoidvalve_7.closeValve();
+            // if (maxAirPressure < 1.05)
+            // {
+            //   solenoidvalve_1.closeValve();
+            //   solenoidvalve_2.closeValve();
+            //   solenoidvalve_3.closeValve();
+            //   solenoidvalve_4.closeValve();
+            //   solenoidvalve_5.closeValve();
+            //   solenoidvalve_6.closeValve();
+            //   solenoidvalve_7.closeValve();
 
-              airPumpPower = 0;
-            }
+            //   airPumpPower = 0;
+            // }
 
 
-            if (airPumpTurnOff == true)
-            {
-              airPumpPower = 0;
-            }
+            // if (airPumpTurnOff == true)
+            // {
+            //   airPumpPower = 0;
+            // }
 
-            airpump.motorSetPower(airPumpPower);
+            // airpump.motorSetPower(airPumpPower);
 
-            if (millis() - start_time > MAX_WAIT_TIME_MS)
-            {              
-              break;
-            }
+            // if (millis() - start_time > MAX_WAIT_TIME_MS)
+            // {              
+            //   break;
+            // }
           }
 
           airpump.motorSetPower(0);

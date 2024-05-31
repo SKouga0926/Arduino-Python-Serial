@@ -10,7 +10,7 @@ import re
 import csv
 import pandas as pd
 
-ser = serial.Serial("COM5", 9600, timeout=0.1) 
+ser = serial.Serial("COM6", 9600, timeout=0.1) 
 
 id = 0
 max_id = 100
