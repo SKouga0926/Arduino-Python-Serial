@@ -7,8 +7,8 @@ import numpy as np
 
 from pkg import bluetooth_server
 from pkg import space_separated_parser 
-from pkg import dnn_model
-from pkg import dnn_model_6
+from pkg import dnn_air_pressure_model
+from pkg import dnn_sleep_position_model
 
 MAX_WAIT_TIME_SEC = 5 
 
@@ -36,8 +36,8 @@ parser = space_separated_parser.SpaceSeparatedParser()
 
 # Dnnインスタンス作成
 
-dnn_model = dnn_model.DnnModel((4,), 4)
-dnn_model.load_model('../model/dnn_model_4/pressure_model_widgets.h5')
+dnn_model = dnn_air_pressure_model.DnnAirPressureModel((4,), 4)
+dnn_model.load_model('../model/dnn_air_pressure_model/pressure_model_widgets.h5')
 
 # dnn_model_6 = dnn_model_6.DnnModel_6((4,), 3)
 # dnn_model_6.load_model('../model/dnn_model_6/pressure_model_widgets.h5')
